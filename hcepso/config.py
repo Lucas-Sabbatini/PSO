@@ -26,5 +26,5 @@ BIN_H        = 100
 P_MUTATION   = 0.3
 
 # Experiment
-N_RUNS       = 1
+N_RUNS       = 3
 BETA_VALUES  = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
