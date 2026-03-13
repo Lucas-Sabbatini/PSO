@@ -1,7 +1,7 @@
 """Main HCEPSO optimization loop."""
 
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 from ..instance.instance import Instance
@@ -21,7 +21,10 @@ class Solution:
     gBest: np.ndarray
     fitness: float
     n_bins: int
-    history: List[float]   # best fitness per iteration
+    history: List[float]                              # best fitness per iteration
+    particle_snapshots: Optional[List[np.ndarray]] = field(default=None)  # (iter, pop, n)
+    gbest_snapshots: Optional[List[np.ndarray]] = field(default=None)     # (iter, n)
+    bin_snapshots: Optional[List] = field(default=None)                   # iter -> List[Bin]
 
 
 def _make_fitness_fn(instance: Instance):
@@ -48,6 +51,7 @@ def run(
     p_mutation: float = config.P_MUTATION,
     seed: Optional[int] = None,
     verbose: bool = False,
+    record: bool = False,
 ) -> Solution:
     rng = np.random.default_rng(seed)
     n = instance.n
@@ -67,6 +71,19 @@ def run(
     gBest_fitness = particles[gBest_idx].pBest_fitness
 
     history = [gBest_fitness]
+
+    part_snaps: List[np.ndarray] = []
+    gbest_snaps: List[np.ndarray] = []
+    bin_snaps: List = []
+
+    def _snapshot():
+        part_snaps.append(np.vstack([p.X for p in particles]))
+        gbest_snaps.append(gBest.copy())
+        seq = decode(gBest, instance.items)
+        bin_snaps.append(pack_items(seq, instance.bin_W, instance.bin_H, instance.conflicts))
+
+    if record:
+        _snapshot()
 
     # 3. Main loop
     for k in range(1, max_iter + 1):
@@ -106,6 +123,8 @@ def run(
                 gBest_fitness = p.pBest_fitness
 
         history.append(gBest_fitness)
+        if record:
+            _snapshot()
         if verbose:
             particle_fitnesses = [p.pBest_fitness for p in particles]
             avg_f = float(np.mean(particle_fitnesses))
@@ -120,4 +139,12 @@ def run(
     bins = pack_items(sequence, instance.bin_W, instance.bin_H, instance.conflicts)
     n_bins = len(bins)
 
-    return Solution(gBest=gBest, fitness=gBest_fitness, n_bins=n_bins, history=history)
+    return Solution(
+        gBest=gBest,
+        fitness=gBest_fitness,
+        n_bins=n_bins,
+        history=history,
+        particle_snapshots=part_snaps if record else None,
+        gbest_snapshots=gbest_snaps if record else None,
+        bin_snapshots=bin_snaps if record else None,
+    )
