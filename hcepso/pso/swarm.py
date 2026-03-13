@@ -106,8 +106,14 @@ def run(
                 gBest_fitness = p.pBest_fitness
 
         history.append(gBest_fitness)
-        if verbose and k % 50 == 0:
-            print(f"  iter {k:4d} | best fitness = {gBest_fitness:.2f}")
+        if verbose:
+            particle_fitnesses = [p.pBest_fitness for p in particles]
+            avg_f = float(np.mean(particle_fitnesses))
+            worst_f = float(np.max(particle_fitnesses))
+            print(
+                f"  iter {k:4d}/{max_iter} | ω={omega:.4f} | "
+                f"gBest={gBest_fitness:.2f}  avg={avg_f:.2f}  worst={worst_f:.2f}"
+            )
 
     # Count bins in best solution
     sequence = decode(gBest, instance.items)
